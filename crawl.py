@@ -24,11 +24,21 @@ def extract_movies_essentials(bs_entities):
 def extract_movies_detail(title_url):
     response = requests.get(title_url, headers=header)
 
-    soup = BeautifulSoup(response.content,  'html.parser')
-    movie_popularity = soup.find('div', {'data-testid': 'hero-rating-bar__popularity__score'}).get_text()
+    soup = BeautifulSoup(response.content, 'html.parser')
+    movie_popularity = soup.find('div', {'data-testid': 'hero-rating-bar__popularity__score'})
+    if movie_popularity == None:
+        movie_popularity = '0'
+    else:
+        movie_popularity = movie_popularity.get_text()
     movie_director = soup.find('div', {'class': 'ipc-metadata-list-item__content-container'}).get_text()
-    movie_genre = soup.find('div', {'data-testid': 'genres'}).get_text()
-    movie_introduction = soup.find('p', {'data-testid': 'plot'}).find('span', {'data-testid': 'plot-xs_to_m'}).get_text()
+    movie_genre_entries = soup.find('div', {'data-testid': 'genres'}).findAll('a')
+    movie_genre = []
+    for movie_genre_entry in movie_genre_entries:
+        movie_genre.append(movie_genre_entry.text)
+    movie_introduction = soup.find('p', {'data-testid': 'plot'})
+    if movie_introduction == None:
+        movie_introduction = soup.find('div', {'data-testid': 'plot'})
+    movie_introduction = movie_introduction.find('span', {'data-testid': 'plot-xs_to_m'}).get_text()
     movie_casts = []
     cast_section = soup.find('section', {'data-testid': 'title-cast'})
     cast_entries = cast_section.findAll('div', {'data-testid': 'title-cast-item'})
@@ -36,12 +46,13 @@ def extract_movies_detail(title_url):
         movie_casts.append(cast_entry.contents[1].a.text)
     return movie_popularity, movie_director, movie_casts, movie_genre, movie_introduction
 
+
 base_url = "https://www.imdb.com"
 url = "{}/chart/top".format(base_url)
 header = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
-# _, _, _, title_url = extract_movies_essentials()
+
 response = requests.get(url)
 soup = BeautifulSoup(response.content, 'html.parser')
 entities = soup.findAll('tr')
@@ -55,7 +66,6 @@ for i in range(250):
     movie_data = [movie_id, movie_title, movie_published_year, movie_title_url, movie_imdb_rating]
     detailed_movie_data = extract_movies_detail(movie_title_url)
     movie_data.extend(detailed_movie_data)
+    print(movie_data)
     df_imdb.loc[len(df_imdb)] = movie_data
-print(df_imdb)
-
-# print(extract_movies_detail(title_url))
+# print(df_imdb)
